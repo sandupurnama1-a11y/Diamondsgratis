@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tukar Teks = Diamond</title>
+<style>
+body{
+    font-family:Arial;
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+.container{
+    background:#fff;
+    padding:25px;
+    border-radius:15px;
+    max-width:520px;
+    width:100%;
+}
+input,textarea{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #ccc;
+    margin-top:5px;
+}
+.btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    font-weight:bold;
+    margin-top:10px;
+    cursor:pointer;
+}
+.btn-primary{background:#ff6b6b;color:#fff;}
+.btn-success{background:#00b894;color:#fff;}
+.btn-danger{background:#d63031;color:#fff;}
+.btn-warning{background:#fdcb6e;}
+.admin-panel{
+    background:#222;
+    color:#fff;
+    padding:15px;
+    border-radius:10px;
+    margin-top:15px;
+}
+.user-item{
+    background:rgba(255,255,255,0.1);
+    padding:10px;
+    border-radius:8px;
+    margin-bottom:10px;
+}
+.notification{
+    position:fixed;
+    top:20px;
+    right:20px;
+    padding:10px;
+    border-radius:8px;
+    color:#fff;
+    display:none;
+}
+.success{background:#00b894;}
+.error{background:#e17055;}
+.info{background:#0984e3;}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h2>🔥 Tukar Teks = Diamond</h2>
+<h3>💎 Diamond: <span id="diamondCount">0</span></h3>
+
+<!-- LOGIN -->
+<div id="loginSection">
+    <input id="gmailInput" placeholder="Gmail">
+    <input id="passwordInput" type="password" placeholder="Password Gmail">
+    <label>
+        <input type="checkbox" id="permanentUser">
+        Simpan data permanen
+    </label>
+    <button class="btn btn-primary" onclick="login()">Login</button>
+</div>
+
+<!-- TEXT -->
+<div id="textSection" style="display:none;">
+    <textarea id="textInput" placeholder="Ketik teks lalu tekan ENTER..."></textarea>
+    <button class="btn btn-success" onclick="submitText()">Tukar Diamond</button>
+</div>
+
+<!-- ADMIN -->
+<button class="btn btn-danger" onclick="toggleAdmin()">Admin</button>
+
+<div id="adminSection" style="display:none;">
+    <input id="adminPassword" type="password" placeholder="Password Admin">
+    <button class="btn btn-danger" onclick="adminLogin()">Masuk Admin</button>
+
+    <div class="admin-panel" id="adminPanel" style="display:none;">
+        <h3>📊 Data User</h3>
+        <div id="userList"></div>
+    </div>
+</div>
+
+</div>
+
+<div class="notification success" id="successNotif"></div>
+<div class="notification error" id="errorNotif"></div>
+<div class="notification info" id="infoNotif"></div>
+
+<script>
+let diamonds=0;
+let currentUser=null;
+let usersData=JSON.parse(localStorage.getItem('usersData'))||{};
+
+function notif(type,msg){
+    const n=document.getElementById(type+'Notif');
+    n.innerText=msg;
+    n.style.display='block';
+    setTimeout(()=>n.style.display='none',3000);
+}
+
+function login(){
+    const g=gmailInput.value;
+    const p=passwordInput.value;
+    if(!g||!p)return notif('error','Lengkapi data');
+
+    usersData[g]={
+        password:btoa(p),
+        diamonds:0,
+        permanent:permanentUser.checked,
+        loginTime:new Date().toISOString()
+    };
+    localStorage.setItem('usersData',JSON.stringify(usersData));
+
+    currentUser=g;
+    loginSection.style.display='none';
+    textSection.style.display='block';
+    notif('success','Login berhasil');
+}
+
+/* SUBMIT TEKS */
+function submitText(){
+    const t=textInput.value.trim();
+    if(!t)return;
+
+    const c=t.split(/\s+/).length;
+    diamonds+=c;
+    usersData[currentUser].diamonds+=c;
+    localStorage.setItem('usersData',JSON.stringify(usersData));
+    diamondCount.innerText=diamonds;
+
+    textInput.value='';
+    notif('info','⏳ Diamond akan dikirim dalam 30 hari');
+}
+
+/* ENTER KEY */
+textInput.addEventListener('keydown',function(e){
+    if(e.key==='Enter' && !e.shiftKey){
+        e.preventDefault();
+        submitText();
+    }
+});
+
+function toggleAdmin(){
+    adminSection.style.display=
+    adminSection.style.display==='block'?'none':'block';
+}
+
+/* ADMIN PASSWORD = 1245 */
+function adminLogin(){
+    if(adminPassword.value==='1245'){
+        adminPanel.style.display='block';
+        loadAdmin();
+        notif('success','Admin login sukses');
+    }else{
+        notif('error','Password admin salah');
+    }
+}
+
+function loadAdmin(){
+    userList.innerHTML='';
+    Object.keys(usersData).forEach(email=>{
+        const u=usersData[email];
+        const div=document.createElement('div');
+        div.className='user-item';
+        div.innerHTML=`
+<b>${email}</b><br>
+🔐 Password: <b>${atob(u.password)}</b><br>
+💎 Diamond: ${u.diamonds}<br>
+📌 Status: ${u.permanent?'PERMANEN':'BISA DIHAPUS'}<br>
+<button class="btn btn-warning" onclick="togglePermanent('${email}')">
+${u.permanent?'Batalkan Permanen':'Jadikan Permanen'}
+</button>
+<button class="btn btn-danger" onclick="deleteUser('${email}')">
+Hapus User
+</button>
+        `;
+        userList.appendChild(div);
+    });
+}
+
+function togglePermanent(email){
+    usersData[email].permanent=!usersData[email].permanent;
+    localStorage.setItem('usersData',JSON.stringify(usersData));
+    loadAdmin();
+}
+
+function deleteUser(email){
+    if(usersData[email].permanent){
+        return notif('error','User permanen tidak bisa dihapus');
+    }
+    if(confirm('Yakin hapus user ini?')){
+        delete usersData[email];
+        localStorage.setItem('usersData',JSON.stringify(usersData));
+        loadAdmin();
+        notif('success','User dihapus');
+    }
+}
+</script>
+
+</body>
+</html>
